@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const { WebSocketServer } = require('ws');
 const {
   normalizeUsername,
@@ -87,7 +88,6 @@ let projects = read('projects.json', []);
 let messages = read('messages.json', []);
 let roomMessages = read('roomMessages.json', []);
 
-// One-time migration for older alpha data that stored plaintext passwords.
 let migratedPasswords = false;
 for (const user of users) {
   if (!user.passwordHash && typeof user.password === 'string') {
@@ -97,6 +97,23 @@ for (const user of users) {
   }
 }
 if (migratedPasswords) save('users.json', users);
+
+let migratedMessages = false;
+for (const message of messages) {
+  if (!message.id) {
+    message.id = crypto.randomUUID();
+    migratedMessages = true;
+  }
+  if (!Object.hasOwn(message, 'deliveredAt')) {
+    message.deliveredAt = null;
+    migratedMessages = true;
+  }
+  if (!Object.hasOwn(message, 'readAt')) {
+    message.readAt = null;
+    migratedMessages = true;
+  }
+}
+if (migratedMessages) save('messages.json', messages);
 
 const sockets = new Map();
 const socketsByUser = new Map();
@@ -128,6 +145,18 @@ function broadcast(payload) {
   const body = JSON.stringify(payload);
   for (const client of wss.clients) if (client.readyState === 1) client.send(body);
 }
+function sendToUser(username, payload) {
+  const set = socketsByUser.get(username);
+  if (!set) return false;
+  let sent = false;
+  for (const ws of set) {
+    if (ws.readyState === 1) {
+      send(ws, payload);
+      sent = true;
+    }
+  }
+  return sent;
+}
 function sendError(ws, code, message) {
   send(ws, { type: 'error', code, message });
 }
@@ -147,6 +176,21 @@ function rateAllowed(ws, bucket = 'events', limit = MAX_EVENTS_PER_MINUTE) {
   limits.set(ws, state);
   return current.count <= limit;
 }
+function markPendingDelivered(username) {
+  const deliveredAt = new Date().toISOString();
+  const changed = [];
+  for (const message of messages) {
+    if (message.to === username && !message.deliveredAt) {
+      message.deliveredAt = deliveredAt;
+      changed.push(message);
+    }
+  }
+  if (!changed.length) return;
+  save('messages.json', messages);
+  for (const message of changed) {
+    sendToUser(message.from, { type: 'dmDelivery', messageId: message.id, deliveredAt });
+  }
+}
 function attach(ws, username) {
   const existing = sockets.get(ws);
   if (existing === username) return;
@@ -162,6 +206,7 @@ function attach(ws, username) {
     save('users.json', users);
   }
   if (first) {
+    markPendingDelivered(username);
     broadcast({ type: 'buddyOnline', username });
     broadcast({ type: 'directory', ...directory() });
   }
@@ -259,7 +304,7 @@ if (HOST === '127.0.0.1' || HOST === 'localhost') {
 wss.on('connection', ws => {
   ws.isAlive = true;
   ws.on('pong', () => { ws.isAlive = true; });
-  send(ws, { type: 'hello', protocol: 2 });
+  send(ws, { type: 'hello', protocol: 3 });
 
   ws.on('message', raw => {
     if (!rateAllowed(ws)) return sendError(ws, 'RATE_LIMIT', 'Too many requests. Try again shortly.');
@@ -330,20 +375,52 @@ wss.on('connection', ws => {
       ).slice(-MAX_HISTORY);
       return send(ws, { type: 'conversationHistory', messages: history });
     }
+    if (msg.type === 'markConversationRead') {
+      const buddy = normalizeUsername(msg.buddy);
+      if (!buddy) return sendError(ws, 'BAD_BUDDY', 'Invalid buddy name.');
+      const readAt = new Date().toISOString();
+      const changed = [];
+      for (const message of messages) {
+        if (message.from.toLowerCase() === buddy && message.to === username && !message.readAt) {
+          if (!message.deliveredAt) message.deliveredAt = readAt;
+          message.readAt = readAt;
+          changed.push(message);
+        }
+      }
+      if (changed.length) {
+        save('messages.json', messages);
+        sendToUser(buddy, {
+          type: 'dmRead',
+          reader: username,
+          messageIds: changed.map(message => message.id),
+          readAt
+        });
+      }
+      return send(ws, { type: 'conversationRead', buddy, messageIds: changed.map(message => message.id), readAt });
+    }
     if (msg.type === 'dmSend') {
       const to = normalizeUsername(msg.to);
       const text = cleanText(msg.text, 4000);
       if (!to || !text) return sendError(ws, 'BAD_DM', 'Recipient and message are required.');
       const recipient = users.find(item => item.username.toLowerCase() === to);
       if (!recipient) return sendError(ws, 'NO_USER', 'Recipient does not exist.');
-      const dm = { from: username, to: recipient.username, text, timestamp: new Date().toISOString() };
+      const timestamp = new Date().toISOString();
+      const recipientOnline = !!socketsByUser.get(recipient.username)?.size;
+      const dm = {
+        id: crypto.randomUUID(),
+        from: username,
+        to: recipient.username,
+        text,
+        timestamp,
+        deliveredAt: recipientOnline ? timestamp : null,
+        readAt: null
+      };
       messages = trimStore([...messages, dm]);
       save('messages.json', messages);
       const payload = { type: 'message', ...dm };
-      for (const name of new Set([username, recipient.username])) {
-        const set = socketsByUser.get(name);
-        if (set) for (const sock of set) send(sock, payload);
-      }
+      sendToUser(username, payload);
+      if (recipient.username !== username) sendToUser(recipient.username, payload);
+      if (dm.deliveredAt) sendToUser(username, { type: 'dmDelivery', messageId: dm.id, deliveredAt: dm.deliveredAt });
       return;
     }
     if (msg.type === 'joinRoom') {
