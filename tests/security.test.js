@@ -31,11 +31,22 @@ test('session tokens have strong entropy and URL-safe encoding', () => {
   assert.ok(a.length >= 40);
 });
 
-test('server removes legacy registerClient authentication bypass', () => {
+test('server removes username-trust auth and revokes whole sessions', () => {
   const server = fs.readFileSync(path.join(root, 'server/server.js'), 'utf8');
   assert.doesNotMatch(server, /registerClient/);
   assert.match(server, /resumeSession/);
   assert.match(server, /requireAuth/);
+  assert.match(server, /sessionSockets/);
+  assert.match(server, /revokeSession/);
+  assert.match(server, /socketSessions/);
+});
+
+test('server keeps safe network and resource defaults', () => {
+  const server = fs.readFileSync(path.join(root, 'server/server.js'), 'utf8');
+  assert.match(server, /OUIJI_HOST \|\| '127\.0\.0\.1'/);
+  assert.match(server, /maxPayload:\s*64 \* 1024/);
+  assert.match(server, /MAX_EVENTS_PER_MINUTE/);
+  assert.match(server, /MAX_STORED_MESSAGES/);
 });
 
 test('Electron windows keep security invariants', () => {
@@ -45,6 +56,7 @@ test('Electron windows keep security invariants', () => {
   assert.match(main, /sandbox:\s*true/);
   assert.match(main, /setWindowOpenHandler/);
   assert.match(main, /will-navigate/);
+  assert.match(main, /\['ws:', 'wss:'\]/);
 });
 
 test('renderer pages use CSP and external scripts', () => {
