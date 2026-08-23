@@ -4,6 +4,22 @@ All notable Ouiji changes should be recorded here. Ouiji is pre-1.0/alpha softwa
 
 ## [Unreleased]
 
+### Messaging UX pass
+
+#### Notifications
+
+- Added unread counters for direct-message contacts and rooms in the buddy-list window.
+- Added total unread count to the Ouiji window title/header.
+- Opening a DM or room now clears its unread counter.
+- Added incoming-message sound handling to the main buddy-list window so messages are noticeable even when their chat window is closed.
+- Added native desktop notifications for incoming DMs, room messages, and buddy sign-ons.
+- Native notification payloads are length-limited and sanitized across the Electron preload bridge.
+
+#### Presence
+
+- Preserved the existing sign-on/sign-off sounds while making sign-on events visible as desktop notifications.
+- Presence events continue to distinguish a user's first active socket and final disconnected socket, preventing extra pop-out windows from creating false sign-on/off events.
+
 ### v3.2 public-hardening cycle
 
 #### Security
