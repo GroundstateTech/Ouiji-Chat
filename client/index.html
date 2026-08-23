@@ -1,0 +1,26 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self'; connect-src ws: wss:; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Ouiji InHouse</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body{overflow:hidden}.login{width:min(300px,calc(100% - 28px));margin:34px auto;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:18px;box-shadow:0 18px 40px rgba(0,0,0,.42)}
+    .brand-row{display:flex;align-items:center;justify-content:space-between}.sigil{font-size:24px;color:var(--accent);text-shadow:0 0 16px rgba(79,195,247,.55)}
+    .title{color:var(--accent);font-weight:bold;letter-spacing:.12em;text-transform:uppercase}.subtitle{color:var(--muted);font-size:10px;margin-top:2px}.note{color:var(--muted);font-size:11px;background:rgba(79,195,247,.07);border:1px solid rgba(79,195,247,.15);border-radius:6px;padding:8px;margin:12px 0}.login-message{font-size:11px;color:#ffca7a;margin:8px 0}.login label{display:block;font-size:10px;color:var(--muted);margin-top:8px}.login input{width:100%;margin-top:4px}.login-actions{display:flex;justify-content:flex-end;margin-top:12px}
+    .window{width:100%;height:100vh;background:var(--panel);display:flex;flex-direction:column}.header{height:48px;padding:7px 8px;border-bottom:1px solid var(--border);background:linear-gradient(to right,var(--panel2),#151a28);display:flex;justify-content:space-between;align-items:center}.body{flex:1;overflow-y:auto;padding:6px}.section{color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.12em;margin:9px 2px 5px}.dept{margin-bottom:7px}.dept-name{color:var(--accent);font-size:11px;padding:3px 4px}.person,.room{border:0;background:transparent;color:var(--text);width:100%;font:inherit;text-align:left;font-size:12px;padding:5px 5px 5px 10px;border-radius:5px;display:flex;align-items:center;gap:6px;user-select:none}.person:hover,.room:hover{background:var(--hover)}.dot{width:8px;height:8px;border-radius:50%;background:var(--gray);flex:none}.dot.Online{background:var(--green);box-shadow:0 0 7px rgba(100,220,140,.35)}.dot.Busy,.dot.Away{background:var(--yellow)}.dot.Meeting{background:var(--red)}.room-icon{color:var(--accent);font-weight:bold;width:8px}.name{flex:1}.role{color:var(--muted);font-size:9px}.unread{min-width:18px;height:18px;padding:0 5px;border-radius:10px;background:var(--accent);color:#06131a;font-size:9px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 0 10px rgba(79,195,247,.2)}.empty{font-size:10px;color:var(--muted);padding:3px 10px}.search-wrap{padding:7px;border-bottom:1px solid var(--border);background:var(--panel)}.search-wrap input{width:100%}.footer{min-height:50px;border-top:1px solid var(--border);padding:6px;display:flex;justify-content:space-between;align-items:center;font-size:10px;color:var(--muted);gap:6px}.presence-line{margin-top:2px;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.footer-actions{display:flex;gap:3px;flex-wrap:wrap;justify-content:flex-end}#menu{position:fixed;display:none;z-index:99;background:var(--panel2);border:1px solid var(--border);border-radius:6px;min-width:155px;box-shadow:0 10px 25px rgba(0,0,0,.5);padding:4px}#menu button{display:block;width:100%;text-align:left;background:transparent;border:0;color:var(--text);padding:7px 9px;border-radius:4px}#menu button:hover{background:var(--hover)}#toast{position:fixed;bottom:58px;left:8px;right:8px;background:var(--panel2);border:1px solid var(--border);font-size:11px;padding:7px;display:none;border-radius:6px;z-index:100}#connectionState{position:fixed;top:5px;right:42px;z-index:10;font-size:9px;padding:3px 6px;border-radius:20px;background:rgba(0,0,0,.35);color:var(--muted);pointer-events:none}#connectionState[data-state="online"]{color:var(--green)}#connectionState[data-state="connecting"]{color:var(--yellow)}
+  </style>
+</head>
+<body>
+  <audio id="snd-incoming" src="../sounds/incoming.wav"></audio>
+  <audio id="snd-online" src="../sounds/online.wav"></audio>
+  <audio id="snd-offline" src="../sounds/offline.wav"></audio>
+  <div id="connectionState" data-state="offline">Disconnected</div>
+  <div id="app"></div>
+  <div id="menu"></div>
+  <div id="toast"></div>
+  <script src="index.js"></script>
+</body>
+</html>
