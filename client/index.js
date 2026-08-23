@@ -38,8 +38,8 @@ function toast(message) {
   toastEl._timer = setTimeout(() => { toastEl.style.display = 'none'; }, 2400);
 }
 
-function notify(title, body = '') {
-  window.ouijiAPI?.notify?.(title, body);
+function notify(title, body = '', context = {}) {
+  window.ouijiAPI?.notify?.(title, body, context);
 }
 
 function setConnection(label, state = 'offline') {
@@ -68,6 +68,14 @@ function bumpUnread(store, key) {
   store.set(key, (store.get(key) || 0) + 1);
 }
 
+async function conversationIsOpen(kind, target) {
+  try {
+    return !!(await window.ouijiAPI?.isConversationOpen?.(kind, currentUser, target));
+  } catch {
+    return false;
+  }
+}
+
 function connect() {
   clearTimeout(reconnectTimer);
   setConnection('Connecting…', 'connecting');
@@ -86,7 +94,7 @@ function connect() {
     if (currentUser && sessionToken) scheduleReconnect();
   };
   ws.onerror = () => setConnection('Connection error', 'offline');
-  ws.onmessage = event => {
+  ws.onmessage = async event => {
     let data;
     try { data = JSON.parse(event.data); } catch { return; }
 
@@ -127,18 +135,30 @@ function connect() {
       return;
     }
     if (data.type === 'message' && currentUser && data.to === currentUser && data.from !== currentUser) {
+      const open = await conversationIsOpen('dm', data.from);
+      if (open) {
+        unreadDM.delete(data.from);
+        render();
+        return;
+      }
       bumpUnread(unreadDM, data.from);
       sound('snd-incoming');
       toast(`Message from ${data.from}`);
-      notify(`Ouiji · ${data.from}`, data.text || 'New message');
+      notify(`Ouiji · ${data.from}`, data.text || 'New message', { kind: 'dm', viewer: currentUser, target: data.from });
       render();
       return;
     }
     if (data.type === 'roomMessage' && currentUser && data.from !== currentUser) {
+      const open = await conversationIsOpen('room', data.room);
+      if (open) {
+        unreadRooms.delete(data.room);
+        render();
+        return;
+      }
       bumpUnread(unreadRooms, data.room);
       sound('snd-incoming');
       toast(`New message in ${data.room}`);
-      notify(`Ouiji · #${data.room}`, `${data.from}: ${data.text || ''}`);
+      notify(`Ouiji · #${data.room}`, `${data.from}: ${data.text || ''}`, { kind: 'room', viewer: currentUser, target: data.room });
       render();
       return;
     }
