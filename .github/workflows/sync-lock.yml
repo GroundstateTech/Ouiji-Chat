@@ -1,0 +1,39 @@
+name: Sync Lockfile
+
+on:
+  push:
+    branches: [release/public-hardening-v3.2]
+    paths:
+      - 'package.json'
+      - '.github/workflows/sync-lock.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  lockfile:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: release/public-hardening-v3.2
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Generate lockfile
+        run: npm install --package-lock-only --ignore-scripts
+      - name: Commit lockfile
+        shell: bash
+        run: |
+          if git diff --quiet -- package-lock.json && git ls-files --error-unmatch package-lock.json >/dev/null 2>&1; then
+            echo "Lockfile already current."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- package-lock.json
+          git commit -m "chore: sync package lockfile"
+          git push origin HEAD:release/public-hardening-v3.2
