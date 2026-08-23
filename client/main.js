@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const { pathToFileURL } = require('url');
 
 app.enableSandbox();
 
@@ -15,6 +16,15 @@ function readConfig() {
 
 function safeString(value, max = 160) {
   return String(value || '').trim().slice(0, max);
+}
+
+function safeServerUrl(value) {
+  try {
+    const url = new URL(String(value || ''));
+    return ['ws:', 'wss:'].includes(url.protocol) ? url.toString() : 'ws://localhost:8080/ws';
+  } catch {
+    return 'ws://localhost:8080/ws';
+  }
 }
 
 function secureWindowOptions(overrides = {}) {
@@ -47,10 +57,12 @@ function hardenWindow(win) {
 
 function localFileUrl(file, params = {}) {
   const cfg = readConfig();
-  const url = new URL(`file://${path.join(__dirname, file)}`);
-  url.searchParams.set('serverUrl', safeString(cfg.serverUrl, 300));
+  const url = pathToFileURL(path.join(__dirname, file));
+  url.searchParams.set('serverUrl', safeServerUrl(cfg.serverUrl));
   url.searchParams.set('companyName', safeString(cfg.companyName, 80));
-  for (const [key, value] of Object.entries(params)) url.searchParams.set(key, safeString(value, key === 'sessionToken' ? 200 : 120));
+  for (const [key, value] of Object.entries(params)) {
+    url.searchParams.set(key, safeString(value, key === 'sessionToken' ? 200 : 120));
+  }
   return url.toString();
 }
 
