@@ -160,6 +160,14 @@ ipcMain.on('open-card', (_event, payload = {}) => {
   }, { width: 460, height: 390, title: `Employee Card - ${payload.target}` });
 });
 
+ipcMain.handle('conversation-open', (_event, payload = {}) => {
+  const kind = payload.kind === 'room' ? 'room' : payload.kind === 'dm' ? 'dm' : '';
+  if (!kind || !validIdentity(payload.viewer)) return false;
+  if (kind === 'dm' && !validIdentity(payload.target)) return false;
+  if (kind === 'room' && !validRoom(payload.target)) return false;
+  return hasOpenConversation(kind, payload.viewer, payload.target);
+});
+
 ipcMain.on('notify', (_event, payload = {}) => {
   if (!Notification.isSupported()) return;
   const title = safeString(payload.title, 80);
