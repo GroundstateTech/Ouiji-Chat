@@ -1,0 +1,24 @@
+{
+  "name": "ouiji-inhouse",
+  "version": "3.1.0-alpha",
+  "description": "Ouiji InHouse - internal communications client",
+  "main": "client/main.js",
+  "scripts": {
+    "server": "node server/server.js",
+    "client": "electron .",
+    "start": "electron ."
+  },
+  "dependencies": {
+    "electron": "^32.3.3",
+    "ws": "^8.18.3"
+  },
+  "keywords": [
+    "groundstate",
+    "ouiji",
+    "internal-chat",
+    "electron",
+    "websocket",
+    "lan"
+  ],
+  "author": "Michael Muha / Groundstate"
+}
