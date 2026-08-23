@@ -1,0 +1,46 @@
+# Changelog
+
+All notable Ouiji changes should be recorded here. Ouiji is pre-1.0/alpha software, so interfaces may change between releases.
+
+## [Unreleased]
+
+### v3.2 public-hardening cycle
+
+#### Security
+
+- Replaced username-trust child-window registration with server-issued session tokens.
+- Added salted scrypt password hashing and migration from older plaintext alpha credentials.
+- Added authenticated server-side authorization for directory, profile, history, direct-message and room operations.
+- Added WebSocket payload limits, request/login rate limits and dead-connection heartbeat cleanup.
+- Added bounded message persistence and bounded history responses.
+- Changed server default binding to `127.0.0.1`; LAN binding is now explicit.
+- Enabled Electron application-wide renderer sandboxing.
+- Kept context isolation enabled and Node integration disabled.
+- Added narrow/validated IPC payloads and navigation/popup restrictions.
+- Added renderer Content Security Policy.
+- Removed inline renderer scripts from the primary screens.
+- Changed chat/profile rendering to safe DOM text operations.
+- Added `.gitignore` coverage for runtime data, local config, environment files and build output.
+
+#### Usability
+
+- Added automatic reconnect behavior.
+- Added connection-state indicators.
+- Added searchable employee directory.
+- Added message timestamps and clearer message bubbles.
+- Added visible online count and cleaner presence/status display.
+- Added explicit sign-out control.
+- Made the buddy-list window resizable with sensible minimum dimensions.
+
+#### Developer experience
+
+- Upgraded to current Electron 43 and `ws` 8.21.
+- Added `@electron/packager` for Windows x64 test builds.
+- Added reproducible `package-lock.json`.
+- Added project doctor, syntax checks, security regression tests and `npm run verify`.
+- Added Windows/Linux CI and Windows package-artifact workflow.
+- Expanded README, security, contribution, architecture and deployment documentation.
+
+## [3.1.0-alpha]
+
+Initial canonical GitHub import of the Ouiji InHouse alpha: buddy list, departments, direct-message windows, project/department rooms, presence, employee cards, replaceable sounds and JSON-backed local demo persistence.
