@@ -4,6 +4,22 @@ All notable Ouiji changes should be recorded here. Ouiji is pre-1.0/alpha softwa
 
 ## [Unreleased]
 
+### Delivery/read-state pass
+
+#### Direct messages
+
+- Added persistent message IDs to direct messages.
+- Added `Sent`, `Delivered`, and `Read` state beneath outgoing direct messages.
+- Messages sent to offline users transition to `Delivered` when that user reconnects.
+- Opening/focusing a direct-message window marks unread incoming messages as read server-side and updates the sender's open chat window.
+- Older alpha DM records are migrated in place with IDs and receipt fields when the server starts.
+
+#### Notifications
+
+- Electron now tracks open DM and room windows and reuses/focuses an existing conversation instead of opening duplicates.
+- Buddy-list unread badges, receive sounds, and native desktop notifications are suppressed when the exact DM or room is already open.
+- Notification context is validated through the sandboxed preload bridge before reaching Electron's main process.
+
 ### Messaging UX pass
 
 #### Notifications
