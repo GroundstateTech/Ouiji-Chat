@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, Notification } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { pathToFileURL } = require('url');
@@ -127,4 +127,12 @@ ipcMain.on('open-card', (_event, payload = {}) => {
   openWindow('employee-card.html', {
     viewer: payload.viewer, target: payload.target, sessionToken: payload.sessionToken
   }, { width: 460, height: 390, title: `Employee Card - ${payload.target}` });
+});
+
+ipcMain.on('notify', (_event, payload = {}) => {
+  if (!Notification.isSupported()) return;
+  const title = safeString(payload.title, 80);
+  const body = safeString(payload.body, 240);
+  if (!title) return;
+  new Notification({ title, body, silent: true }).show();
 });

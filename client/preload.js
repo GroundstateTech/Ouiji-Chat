@@ -12,6 +12,9 @@ function safeSession(value) {
   const text = String(value || '').trim();
   return /^[A-Za-z0-9_-]{32,200}$/.test(text) ? text : '';
 }
+function safeNotice(value, max) {
+  return String(value || '').replace(/[\r\n\t]+/g, ' ').trim().slice(0, max);
+}
 
 contextBridge.exposeInMainWorld('ouijiAPI', {
   openDM: (viewer, buddy, sessionToken) => {
@@ -25,5 +28,9 @@ contextBridge.exposeInMainWorld('ouijiAPI', {
   openCard: (viewer, target, sessionToken) => {
     const payload = { viewer: safeIdentity(viewer), target: safeIdentity(target), sessionToken: safeSession(sessionToken) };
     if (payload.viewer && payload.target && payload.sessionToken) ipcRenderer.send('open-card', payload);
+  },
+  notify: (title, body) => {
+    const payload = { title: safeNotice(title, 80), body: safeNotice(body, 240) };
+    if (payload.title) ipcRenderer.send('notify', payload);
   }
 });

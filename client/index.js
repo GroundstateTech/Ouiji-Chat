@@ -10,6 +10,8 @@ let sessionToken = null;
 let directory = { departments: [], users: [], projects: [] };
 let menuTarget = null;
 let query = '';
+const unreadDM = new Map();
+const unreadRooms = new Map();
 
 const appEl = document.getElementById('app');
 const menuEl = document.getElementById('menu');
@@ -36,6 +38,10 @@ function toast(message) {
   toastEl._timer = setTimeout(() => { toastEl.style.display = 'none'; }, 2400);
 }
 
+function notify(title, body = '') {
+  window.ouijiAPI?.notify?.(title, body);
+}
+
 function setConnection(label, state = 'offline') {
   connectionEl.textContent = label;
   connectionEl.dataset.state = state;
@@ -52,6 +58,14 @@ function scheduleReconnect() {
   const delay = Math.min(8000, 500 * (2 ** Math.min(reconnectAttempt++, 4)));
   setConnection(`Reconnecting in ${Math.ceil(delay / 1000)}s`, 'connecting');
   reconnectTimer = setTimeout(connect, delay);
+}
+
+function totalUnread() {
+  return [...unreadDM.values(), ...unreadRooms.values()].reduce((sum, count) => sum + count, 0);
+}
+
+function bumpUnread(store, key) {
+  store.set(key, (store.get(key) || 0) + 1);
 }
 
 function connect() {
@@ -80,6 +94,8 @@ function connect() {
       if (!data.success) return toast(data.message || 'Login failed');
       currentUser = data.username;
       sessionToken = data.sessionToken;
+      unreadDM.clear();
+      unreadRooms.clear();
       directory = { departments: data.departments || [], users: data.users || [], projects: data.projects || [] };
       render();
       toast(`Signed in as ${currentUser}`);
@@ -89,6 +105,8 @@ function connect() {
       if (!data.success) {
         currentUser = null;
         sessionToken = null;
+        unreadDM.clear();
+        unreadRooms.clear();
         renderLogin('Your session expired. Sign in again.');
         return;
       }
@@ -98,6 +116,8 @@ function connect() {
     if (data.type === 'logout') {
       currentUser = null;
       sessionToken = null;
+      unreadDM.clear();
+      unreadRooms.clear();
       renderLogin();
       return;
     }
@@ -106,9 +126,26 @@ function connect() {
       if (currentUser) render();
       return;
     }
+    if (data.type === 'message' && currentUser && data.to === currentUser && data.from !== currentUser) {
+      bumpUnread(unreadDM, data.from);
+      sound('snd-incoming');
+      toast(`Message from ${data.from}`);
+      notify(`Ouiji · ${data.from}`, data.text || 'New message');
+      render();
+      return;
+    }
+    if (data.type === 'roomMessage' && currentUser && data.from !== currentUser) {
+      bumpUnread(unreadRooms, data.room);
+      sound('snd-incoming');
+      toast(`New message in ${data.room}`);
+      notify(`Ouiji · #${data.room}`, `${data.from}: ${data.text || ''}`);
+      render();
+      return;
+    }
     if (data.type === 'buddyOnline' && data.username !== currentUser) {
       sound('snd-online');
       toast(`${data.username} signed on`);
+      notify('Ouiji Presence', `${data.username} signed on`);
       return;
     }
     if (data.type === 'buddyOffline' && data.username !== currentUser) {
@@ -121,6 +158,7 @@ function connect() {
 }
 
 function renderLogin(message = '') {
+  document.title = 'Ouiji InHouse';
   appEl.innerHTML = `<div class="login">
     <div class="brand-row"><div><div class="title">Ouiji InHouse</div><div class="subtitle">${esc(COMPANY)} Internal Network</div></div><span class="sigil">◉</span></div>
     <div class="note">Private-first team messaging. Demo builds use seeded local accounts; change them before real deployment.</div>
@@ -142,6 +180,11 @@ function filteredUsers() {
     .some(value => String(value || '').toLowerCase().includes(q)));
 }
 
+function unreadBadge(count) {
+  if (!count) return '';
+  return `<span class="unread" aria-label="${count} unread">${count > 99 ? '99+' : count}</span>`;
+}
+
 function render() {
   if (!currentUser) return renderLogin();
   const users = filteredUsers();
@@ -153,7 +196,7 @@ function render() {
 
   const deptHtml = directory.departments.map(dept => {
     const people = (usersByDept[dept.id] || []).map(user => `<button class="person" data-user="${esc(user.username)}" title="Double-click to message">
-      <span class="dot ${esc(user.status)}"></span><span class="name">${esc(user.displayName)}</span><span class="role">${esc(user.role)}</span>
+      <span class="dot ${esc(user.status)}"></span><span class="name">${esc(user.displayName)}</span>${unreadBadge(unreadDM.get(user.username) || 0)}<span class="role">${esc(user.role)}</span>
     </button>`).join('');
     return `<section class="dept"><div class="dept-name">${esc(dept.name)}</div>${people || '<div class="empty">No matches</div>'}</section>`;
   }).join('');
@@ -163,13 +206,15 @@ function render() {
     ...directory.projects.map(project => ({ name: `${project.name}-General`, type: 'Project' }))
   ];
   const roomHtml = rooms.map(room => `<button class="room" data-room="${esc(room.name)}">
-    <span class="room-icon">#</span><span class="name">${esc(room.name)}</span><span class="role">${esc(room.type)}</span>
+    <span class="room-icon">#</span><span class="name">${esc(room.name)}</span>${unreadBadge(unreadRooms.get(room.name) || 0)}<span class="role">${esc(room.type)}</span>
   </button>`).join('');
   const online = directory.users.filter(user => user.status !== 'Offline').length;
   const me = directory.users.find(user => user.username === currentUser);
+  const unread = totalUnread();
+  document.title = unread ? `(${unread}) Ouiji InHouse` : 'Ouiji InHouse';
 
   appEl.innerHTML = `<div class="window">
-    <header class="header"><div><div class="title">Ouiji Chat</div><div class="subtitle">${esc(COMPANY)} · ${online} online</div></div><button class="small-btn" id="refreshBtn" title="Refresh directory">↻</button></header>
+    <header class="header"><div><div class="title">Ouiji Chat${unread ? ` · ${unread} unread` : ''}</div><div class="subtitle">${esc(COMPANY)} · ${online} online</div></div><button class="small-btn" id="refreshBtn" title="Refresh directory">↻</button></header>
     <div class="search-wrap"><input id="search" value="${esc(query)}" placeholder="Find a person…" aria-label="Find a person"></div>
     <main class="body"><div class="section">People</div>${deptHtml}<div class="section">Rooms</div>${roomHtml}</main>
     <footer class="footer"><div><strong>${esc(me?.displayName || currentUser)}</strong><div class="presence-line">${esc(me?.status || 'Online')}${me?.statusMessage ? ` · ${esc(me.statusMessage)}` : ''}</div></div><span class="footer-actions"><button class="small-btn" id="statusBtn">Status</button><button class="small-btn" id="cardBtn">Card</button><button class="small-btn" id="logoutBtn">Sign out</button></span></footer>
@@ -198,11 +243,21 @@ function logout() {
   send({ type: 'logout', sessionToken });
   currentUser = null;
   sessionToken = null;
+  unreadDM.clear();
+  unreadRooms.clear();
   renderLogin();
 }
 function refresh() { send({ type: 'getDirectory' }); }
-function openDM(username) { window.ouijiAPI.openDM(currentUser, username, sessionToken); }
-function openRoom(room) { window.ouijiAPI.openRoom(currentUser, room, sessionToken); }
+function openDM(username) {
+  unreadDM.delete(username);
+  render();
+  window.ouijiAPI.openDM(currentUser, username, sessionToken);
+}
+function openRoom(room) {
+  unreadRooms.delete(room);
+  render();
+  window.ouijiAPI.openRoom(currentUser, room, sessionToken);
+}
 function openCard(username) { window.ouijiAPI.openCard(currentUser, username, sessionToken); }
 function setStatus() {
   const status = prompt('Status: Online, Busy, Meeting, Away', 'Online');
