@@ -101,6 +101,8 @@ if (migratedPasswords) save('users.json', users);
 const sockets = new Map();
 const socketsByUser = new Map();
 const sessions = new Map();
+const sessionSockets = new Map();
+const socketSessions = new WeakMap();
 const limits = new WeakMap();
 
 function departmentName(id) {
@@ -182,25 +184,63 @@ function detach(ws) {
     broadcast({ type: 'directory', ...directory() });
   }
 }
+function unbindSession(ws) {
+  const token = socketSessions.get(ws);
+  if (!token) return;
+  socketSessions.delete(ws);
+  const set = sessionSockets.get(token);
+  if (!set) return;
+  set.delete(ws);
+  if (set.size === 0) sessionSockets.delete(token);
+}
+function bindSession(ws, token, username) {
+  const previous = socketSessions.get(ws);
+  if (previous && previous !== token) revokeSession(previous, 'Session replaced');
+  socketSessions.set(ws, token);
+  if (!sessionSockets.has(token)) sessionSockets.set(token, new Set());
+  sessionSockets.get(token).add(ws);
+  attach(ws, username);
+}
 function newSession(username) {
   const token = newSessionToken();
   sessions.set(token, { username, expiresAt: Date.now() + SESSION_TTL_MS });
   return token;
 }
-function resumeSession(token) {
-  const session = sessions.get(String(token || ''));
+function resumeSession(tokenValue) {
+  const token = String(tokenValue || '');
+  const session = sessions.get(token);
   if (!session) return null;
   if (session.expiresAt <= Date.now()) {
-    sessions.delete(String(token || ''));
+    revokeSession(token, 'Session expired');
     return null;
   }
   session.expiresAt = Date.now() + SESSION_TTL_MS;
-  return session.username;
+  return { token, username: session.username };
+}
+function revokeSession(tokenValue, reason = 'Session revoked') {
+  const token = String(tokenValue || '');
+  sessions.delete(token);
+  const set = sessionSockets.get(token);
+  if (!set) return;
+  sessionSockets.delete(token);
+  for (const ws of [...set]) {
+    send(ws, { type: 'sessionRevoked', message: reason });
+    socketSessions.delete(ws);
+    detach(ws);
+    try { ws.close(4001, reason.slice(0, 120)); } catch {}
+  }
 }
 function requireAuth(ws) {
   const username = sockets.get(ws);
-  if (!username) sendError(ws, 'AUTH_REQUIRED', 'Authentication required.');
-  return username || null;
+  const token = socketSessions.get(ws);
+  const session = token ? sessions.get(token) : null;
+  if (!username || !token || !session || session.username !== username || session.expiresAt <= Date.now()) {
+    if (token) revokeSession(token, 'Session expired or invalid');
+    else sendError(ws, 'AUTH_REQUIRED', 'Authentication required.');
+    return null;
+  }
+  session.expiresAt = Date.now() + SESSION_TTL_MS;
+  return username;
 }
 
 const wss = new WebSocketServer({
@@ -243,25 +283,26 @@ wss.on('connection', ws => {
       if (!user || !verifyPassword(password, user.passwordHash)) {
         return send(ws, { type: 'auth', success: false, message: 'Invalid username or password' });
       }
-      attach(ws, user.username);
       const sessionToken = newSession(user.username);
+      bindSession(ws, sessionToken, user.username);
       return send(ws, { type: 'auth', success: true, sessionToken, username: user.username, user: pub(user), ...directory() });
     }
 
     if (msg.type === 'resumeSession') {
-      const username = resumeSession(msg.sessionToken);
-      if (!username) return send(ws, { type: 'session', success: false, message: 'Session expired or invalid.' });
-      attach(ws, username);
-      return send(ws, { type: 'session', success: true, username });
+      const resumed = resumeSession(msg.sessionToken);
+      if (!resumed) return send(ws, { type: 'session', success: false, message: 'Session expired or invalid.' });
+      bindSession(ws, resumed.token, resumed.username);
+      return send(ws, { type: 'session', success: true, username: resumed.username });
     }
 
     const username = requireAuth(ws);
     if (!username) return;
 
     if (msg.type === 'logout') {
-      if (msg.sessionToken) sessions.delete(String(msg.sessionToken));
-      detach(ws);
-      return send(ws, { type: 'logout', success: true });
+      const token = socketSessions.get(ws);
+      send(ws, { type: 'logout', success: true });
+      if (token) revokeSession(token, 'Signed out');
+      return;
     }
     if (msg.type === 'getDirectory') return send(ws, { type: 'directory', ...directory() });
     if (msg.type === 'setStatus') {
@@ -325,11 +366,19 @@ wss.on('connection', ws => {
     sendError(ws, 'UNKNOWN_TYPE', 'Unknown message type.');
   });
 
-  ws.on('close', () => detach(ws));
-  ws.on('error', () => detach(ws));
+  const cleanup = () => {
+    detach(ws);
+    unbindSession(ws);
+  };
+  ws.on('close', cleanup);
+  ws.on('error', cleanup);
 });
 
 const heartbeat = setInterval(() => {
+  const now = Date.now();
+  for (const [token, session] of sessions) {
+    if (session.expiresAt <= now) revokeSession(token, 'Session expired');
+  }
   for (const ws of wss.clients) {
     if (ws.isAlive === false) {
       ws.terminate();
