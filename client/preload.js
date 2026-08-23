@@ -29,8 +29,17 @@ contextBridge.exposeInMainWorld('ouijiAPI', {
     const payload = { viewer: safeIdentity(viewer), target: safeIdentity(target), sessionToken: safeSession(sessionToken) };
     if (payload.viewer && payload.target && payload.sessionToken) ipcRenderer.send('open-card', payload);
   },
-  notify: (title, body) => {
-    const payload = { title: safeNotice(title, 80), body: safeNotice(body, 240) };
+  notify: (title, body, context = {}) => {
+    const kind = context.kind === 'room' ? 'room' : context.kind === 'dm' ? 'dm' : '';
+    const viewer = safeIdentity(context.viewer);
+    const target = kind === 'room' ? safeRoom(context.target) : safeIdentity(context.target);
+    const payload = {
+      title: safeNotice(title, 80),
+      body: safeNotice(body, 240),
+      kind,
+      viewer,
+      target
+    };
     if (payload.title) ipcRenderer.send('notify', payload);
   }
 });
