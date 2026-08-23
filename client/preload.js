@@ -29,6 +29,16 @@ contextBridge.exposeInMainWorld('ouijiAPI', {
     const payload = { viewer: safeIdentity(viewer), target: safeIdentity(target), sessionToken: safeSession(sessionToken) };
     if (payload.viewer && payload.target && payload.sessionToken) ipcRenderer.send('open-card', payload);
   },
+  isConversationOpen: async (kind, viewer, target) => {
+    const normalizedKind = kind === 'room' ? 'room' : kind === 'dm' ? 'dm' : '';
+    const payload = {
+      kind: normalizedKind,
+      viewer: safeIdentity(viewer),
+      target: normalizedKind === 'room' ? safeRoom(target) : safeIdentity(target)
+    };
+    if (!payload.kind || !payload.viewer || !payload.target) return false;
+    return !!(await ipcRenderer.invoke('conversation-open', payload));
+  },
   notify: (title, body, context = {}) => {
     const kind = context.kind === 'room' ? 'room' : context.kind === 'dm' ? 'dm' : '';
     const viewer = safeIdentity(context.viewer);
