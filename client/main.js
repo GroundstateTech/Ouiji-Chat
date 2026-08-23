@@ -5,6 +5,8 @@ const { pathToFileURL } = require('url');
 
 app.enableSandbox();
 
+const conversationWindows = new Map();
+
 function readConfig() {
   const local = path.join(__dirname, '..', 'config.local.json');
   const shared = path.join(__dirname, '..', 'config.json');
@@ -79,9 +81,24 @@ function createMainWindow() {
   win.loadURL(localFileUrl('index.html'));
 }
 
-function openWindow(file, params, opts = {}) {
+function conversationKey(kind, viewer, target) {
+  return `${kind}:${String(viewer || '').toLowerCase()}:${String(target || '').toLowerCase()}`;
+}
+
+function openWindow(file, params, opts = {}, key = null) {
   const allowed = new Set(['chat.html', 'employee-card.html']);
-  if (!allowed.has(file)) return;
+  if (!allowed.has(file)) return null;
+
+  if (key) {
+    const existing = conversationWindows.get(key);
+    if (existing && !existing.isDestroyed()) {
+      if (existing.isMinimized()) existing.restore();
+      existing.show();
+      existing.focus();
+      return existing;
+    }
+  }
+
   const win = new BrowserWindow(secureWindowOptions({
     width: opts.width || 640,
     height: opts.height || 480,
@@ -91,7 +108,14 @@ function openWindow(file, params, opts = {}) {
     title: safeString(opts.title || 'Ouiji InHouse', 120)
   }));
   hardenWindow(win);
+  if (key) {
+    conversationWindows.set(key, win);
+    win.on('closed', () => {
+      if (conversationWindows.get(key) === win) conversationWindows.delete(key);
+    });
+  }
   win.loadURL(localFileUrl(file, params));
+  return win;
 }
 
 function validIdentity(value) {
@@ -103,6 +127,11 @@ function validRoom(value) {
 function validSession(value) {
   return /^[A-Za-z0-9_-]{32,200}$/.test(String(value || ''));
 }
+function hasOpenConversation(kind, viewer, target) {
+  const key = conversationKey(kind, viewer, target);
+  const win = conversationWindows.get(key);
+  return !!(win && !win.isDestroyed());
+}
 
 app.whenReady().then(createMainWindow);
 app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createMainWindow(); });
@@ -110,16 +139,18 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
 
 ipcMain.on('open-dm', (_event, payload = {}) => {
   if (!validIdentity(payload.viewer) || !validIdentity(payload.buddy) || !validSession(payload.sessionToken)) return;
+  const key = conversationKey('dm', payload.viewer, payload.buddy);
   openWindow('chat.html', {
     kind: 'dm', viewer: payload.viewer, buddy: payload.buddy, sessionToken: payload.sessionToken
-  }, { title: `Chat - ${payload.buddy}` });
+  }, { title: `Chat - ${payload.buddy}` }, key);
 });
 
 ipcMain.on('open-room', (_event, payload = {}) => {
   if (!validIdentity(payload.viewer) || !validRoom(payload.room) || !validSession(payload.sessionToken)) return;
+  const key = conversationKey('room', payload.viewer, payload.room);
   openWindow('chat.html', {
     kind: 'room', viewer: payload.viewer, room: payload.room, sessionToken: payload.sessionToken
-  }, { title: `Room - ${payload.room}` });
+  }, { title: `Room - ${payload.room}` }, key);
 });
 
 ipcMain.on('open-card', (_event, payload = {}) => {
@@ -133,6 +164,10 @@ ipcMain.on('notify', (_event, payload = {}) => {
   if (!Notification.isSupported()) return;
   const title = safeString(payload.title, 80);
   const body = safeString(payload.body, 240);
+  const kind = payload.kind === 'room' ? 'room' : payload.kind === 'dm' ? 'dm' : '';
+  const viewer = safeString(payload.viewer, 32);
+  const target = safeString(payload.target, kind === 'room' ? 80 : 32);
   if (!title) return;
+  if (kind && viewer && target && hasOpenConversation(kind, viewer, target)) return;
   new Notification({ title, body, silent: true }).show();
 });
