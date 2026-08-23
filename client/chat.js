@@ -46,6 +46,13 @@ function formatTime(timestamp) {
   return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 }
 
+function receiptFor(message) {
+  if (kind !== 'dm' || message.from !== viewer) return '';
+  if (message.readAt) return 'Read';
+  if (message.deliveredAt) return 'Delivered';
+  return 'Sent';
+}
+
 function render() {
   chatEl.replaceChildren(...messages.map(message => {
     const row = document.createElement('div');
@@ -57,14 +64,33 @@ function render() {
     body.className = 'msg-body';
     body.textContent = message.text || '';
     row.append(meta, body);
+    const receipt = receiptFor(message);
+    if (receipt) {
+      const receiptEl = document.createElement('div');
+      receiptEl.className = `receipt ${receipt.toLowerCase()}`;
+      receiptEl.textContent = receipt;
+      row.append(receiptEl);
+    }
     return row;
   }));
   chatEl.scrollTop = chatEl.scrollHeight;
 }
 
+function markConversationRead() {
+  if (kind !== 'dm' || !authenticated || document.hidden) return;
+  send({ type: 'markConversationRead', buddy });
+}
+
 function requestHistory() {
   if (kind === 'dm') send({ type: 'getConversation', buddy });
   else send({ type: 'joinRoom', room });
+}
+
+function updateMessage(messageId, patch) {
+  const message = messages.find(item => item.id === messageId);
+  if (!message) return false;
+  Object.assign(message, patch);
+  return true;
 }
 
 function scheduleReconnect() {
@@ -103,6 +129,7 @@ function connect() {
     if (data.type === 'conversationHistory' && kind === 'dm') {
       messages = Array.isArray(data.messages) ? data.messages : [];
       render();
+      markConversationRead();
       return;
     }
     if (data.type === 'roomHistory' && kind === 'room' && data.room === room) {
@@ -112,10 +139,25 @@ function connect() {
     }
     if (data.type === 'message' && kind === 'dm') {
       if ((data.from === viewer && data.to === buddy) || (data.from === buddy && data.to === viewer)) {
-        messages.push(data);
+        if (!messages.some(message => message.id && message.id === data.id)) messages.push(data);
         render();
-        if (data.from !== viewer) sound('snd-incoming');
+        if (data.from !== viewer) {
+          sound('snd-incoming');
+          markConversationRead();
+        }
       }
+      return;
+    }
+    if (data.type === 'dmDelivery' && kind === 'dm') {
+      if (updateMessage(data.messageId, { deliveredAt: data.deliveredAt })) render();
+      return;
+    }
+    if (data.type === 'dmRead' && kind === 'dm' && data.reader === buddy) {
+      let changed = false;
+      for (const id of Array.isArray(data.messageIds) ? data.messageIds : []) {
+        changed = updateMessage(id, { deliveredAt: data.readAt, readAt: data.readAt }) || changed;
+      }
+      if (changed) render();
       return;
     }
     if (data.type === 'roomMessage' && kind === 'room' && data.room === room) {
@@ -145,6 +187,10 @@ inputEl.addEventListener('keydown', event => {
     event.preventDefault();
     sendMessage();
   }
+});
+window.addEventListener('focus', markConversationRead);
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) markConversationRead();
 });
 
 connect();
