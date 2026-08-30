@@ -1,18 +1,27 @@
-# Ouiji InHouse
+# Ouiji Chat
 
-![Ouiji InHouse / Groundstate](assets/ouiji-groundstate-logo.png)
+![Ouiji Chat / Groundstate](assets/ouiji-groundstate-logo.png)
 
-**Ouiji InHouse v3.2 Alpha** is a compact, private-first desktop communications client for small teams. It keeps the fast buddy-list feel of classic instant messengers while adding departments, project rooms, presence, searchable people, popout conversations, and a deliberately small operational footprint.
+**Ouiji Chat** is Groundstate Technology LLC's modern instant-messenger platform: a deliberate return to the fast, personal, buddy-list experience of AOL Instant Messenger, rebuilt for today's networks.
 
-Ouiji is the **communications layer**. Organization-wide identity, authority, HR records, and administrative policy belong outside the chat client so Ouiji can stay focused and understandable.
+The goal is simple: **bring back instant messaging as an actual application instead of turning every conversation into a social-media feed.**
 
-## Open-source philosophy
+Ouiji is designed to support two deployment models from the same product family:
 
-Ouiji is licensed under **GPL-3.0-or-later**. Use it, study it, modify it, fork it, and help improve it. The GPL is intentional: distributed covered modifications/derivatives must preserve the GPL's source-code freedoms rather than turning the shared code into a closed derivative.
+1. **Groundstate-hosted public service** — the long-term internet service, with user accounts, presence, direct messages, rooms, profiles and shared infrastructure operated by Groundstate.
+2. **Independent/private server deployment** — businesses, organizations, labs, teams, communities and closed networks can run their own Ouiji server and point their clients at that server instead of Groundstate infrastructure.
 
-Copyright is not surrendered by open-sourcing the project. Contributors retain copyright in their contributions unless separately agreed. The Groundstate/Ouiji names, logos, artwork, and official-project identity are separate from the source-code license; forks must not imply they are official Groundstate releases without permission.
+A private deployment can remain LAN-only or be operated on an organization's own secured network. That makes Ouiji useful both as a public AIM-style messenger and as a compact private communications system.
 
-See `LICENSE` and `CONTRIBUTING.md`.
+## Product identity and ownership
+
+**Ouiji Chat is an official Groundstate Technology LLC product.** Groundstate controls the official name, trademarks, logos, release channels, hosted service, signing keys, official builds and product roadmap.
+
+The source repository is open for community development under its stated software license, but open development does not transfer ownership of the official Ouiji product or Groundstate branding. Forks and modified distributions must comply with the code license and must use distinct branding unless Groundstate gives written permission.
+
+Groundstate welcomes outside developers, testers, designers and security researchers. New contributions accepted into the official product are governed by `CONTRIBUTOR_AGREEMENT.md` so Groundstate can maintain coherent ownership of the official codebase and continue to offer public, private-server and future commercial deployment options.
+
+See `PRODUCT_OWNERSHIP.md`, `CONTRIBUTOR_AGREEMENT.md`, `LICENSE` and `CONTRIBUTING.md`.
 
 ## What works now
 
@@ -26,20 +35,17 @@ See `LICENSE` and `CONTRIBUTING.md`.
 - Replaceable sent/received/sign-on/sign-off sounds
 - Persistent local alpha message history
 - Server-issued authenticated sessions for every window
-- Scrypt password hashing with one-time migration from the older plaintext alpha format
+- Scrypt password hashing
 - Server-side authorization for directory, profile, history, direct-message and room operations
-- WebSocket payload limits, request/login rate limits, heartbeat cleanup, bounded history responses and bounded local message stores
-- Electron sandboxing, context isolation, disabled Node integration, validated IPC, blocked renderer navigation and restrictive CSPs
+- WebSocket payload limits, request/login rate limits and heartbeat cleanup
+- Electron sandboxing, context isolation, validated IPC and restrictive CSPs
 - Localhost-only server binding by default
-- Project doctor, syntax checks, regression tests and CI-ready verification command
+- Configurable server endpoint for LAN/private deployments
+- Project doctor, syntax checks, regression tests and CI verification
 
-## Requirements
+## Deployment model
 
-- Node.js 22.12 or newer
-- npm
-- Windows, macOS or Linux capable of running Electron
-
-## Quick start: local machine
+### Personal/local development
 
 ```powershell
 npm install
@@ -47,21 +53,31 @@ npm run verify
 npm run server
 ```
 
-Leave the server terminal open. In a second terminal:
+In another terminal:
 
 ```powershell
 npm start
 ```
 
-The safe default endpoint is `ws://localhost:8080/ws`. The server listens only on `127.0.0.1` unless you explicitly opt into LAN access.
+The safe default endpoint is `ws://localhost:8080/ws`.
+
+### Business or closed-network server
+
+Ouiji intentionally allows the client to connect to an independently operated server. A business or organization can deploy the server on its own machine, VM or internal network and configure clients to use that endpoint.
+
+For LAN use, bind the server deliberately and configure `config.local.json` on clients. For routed or internet-connected deployments, use TLS termination and `wss://`, proper account administration, backups, monitoring and hardened host security.
+
+The long-term architecture will keep the **client/server protocol portable** so an organization is not forced to use Groundstate's public service merely to use Ouiji.
+
+## Requirements
+
+- Node.js 22.12 or newer
+- npm
+- Windows, macOS or Linux capable of running Electron
 
 ## Demo accounts
 
-Fresh alpha data seeds demonstration accounts. The initial demo password is `password` and is immediately stored as a salted scrypt hash rather than plaintext. **Do not treat the seeded password as a production credential.**
-
-## Trusted LAN setup
-
-Ouiji intentionally requires explicit configuration for LAN use. Start the server with `OUIJI_HOST=0.0.0.0`, and create an ignored `config.local.json` on each client containing the trusted server's `ws://` URL. For networks you do not fully trust, use TLS termination and `wss://` rather than exposing plain WebSockets.
+Fresh alpha data seeds demonstration accounts. The initial demo password is `password` and is immediately stored as a salted scrypt hash rather than plaintext. **Do not use the seeded credential in a real deployment.**
 
 ## Useful commands
 
@@ -82,7 +98,7 @@ server/       WebSocket server and security helpers
 scripts/      Project diagnostics
 tests/        Regression/security tests
 sounds/       Replaceable application sounds
-assets/       Branding
+assets/       Groundstate/Ouiji branding
 docs/         Architecture and deployment notes
 config.json   Safe checked-in localhost configuration
 ```
@@ -91,22 +107,37 @@ Runtime account/message data is created under `server/data/` and is intentionall
 
 ## Security model
 
-Ouiji v3.2 is significantly hardened compared with the original v3.1 alpha, but it remains **pre-production software**. It is not yet a substitute for a professionally operated internet-facing secure messenger. See `SECURITY.md` before deployment.
+Ouiji remains **pre-production software**. The current alpha is suitable for development and controlled testing, not for assuming production-grade confidentiality on an internet-facing service. See `SECURITY.md` before deployment.
 
 ## Roadmap
 
-Near-term priorities include unread/notification controls, delivery/read state, room permissions, account/password management, safe file/image sharing, message search, durable database storage, TLS/WSS deployment, signed installers, and Groundstate Control Center identity integration.
+Near-term priorities include:
+
+- public Groundstate-hosted account service
+- hardened standalone/private-server package
+- server administration console
+- account/password management
+- unread state and notifications
+- delivery/read state
+- room permissions
+- safe file/image sharing
+- message search
+- durable database storage
+- TLS/WSS deployment
+- signed installers
+- optional Groundstate Control Center identity integration for organizations
+- server federation research without requiring federation for private installs
 
 ## Contributing
 
-Community pull requests are welcome. Start with `CONTRIBUTING.md`, run `npm run verify`, and keep changes scoped. Security changes should include regression coverage.
+Community pull requests are welcome. Start with `CONTRIBUTING.md` and `CONTRIBUTOR_AGREEMENT.md`, run `npm run verify`, and keep changes scoped. Security-sensitive changes should include regression coverage.
 
 ## Support
 
-See `SUPPORT.md` for optional Patreon and PayPal support. Financial support does not purchase ownership, equity, IP rights, or special licensing rights.
+See `SUPPORT.md` for Groundstate support links. Financial support does not purchase ownership, equity, IP rights or special licensing rights.
 
 ## Design principle
 
-**Directory → Presence → Messages → Rooms → Files**
+**Buddy List → Presence → Messages → Rooms → Files**
 
-Fast enough to feel casual. Small enough to understand. Secure defaults before clever defaults.
+Fast enough to feel casual. Small enough to understand. Private-server capable by design.
