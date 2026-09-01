@@ -37,45 +37,12 @@ const save = (name, data) => {
   fs.renameSync(temp, target);
 };
 
-function demoUsers() {
-  return [
-    ['michael', 'Michael', 'admin', 'Director', 'michael@groundstate.local', '101', 'HQ', 'Building Groundstate'],
-    ['sarah', 'Sarah', 'admin', 'Coordinator', 'sarah@groundstate.local', '102', 'HQ', ''],
-    ['kevin', 'Kevin', 'it', 'Technician', 'kevin@groundstate.local', '201', 'Server Room', ''],
-    ['lisa', 'Lisa', 'eng', 'Engineer', 'lisa@groundstate.local', '301', 'Lab', ''],
-    ['steve', 'Steve', 'ops', 'Operator', 'steve@groundstate.local', '401', 'Floor', ''],
-    ['amanda', 'Amanda', 'research', 'Researcher', 'amanda@groundstate.local', '501', 'Research', '']
-  ].map(([username, displayName, departmentId, role, email, extension, location, statusMessage]) => ({
-    username,
-    passwordHash: hashPassword('password'),
-    displayName,
-    departmentId,
-    role,
-    email,
-    extension,
-    location,
-    status: 'Offline',
-    statusMessage
-  }));
-}
-
 function seed() {
-  if (!fs.existsSync(fp('departments.json'))) save('departments.json', [
-    { id: 'admin', name: 'Administration' },
-    { id: 'it', name: 'IT' },
-    { id: 'eng', name: 'Engineering' },
-    { id: 'ops', name: 'Operations' },
-    { id: 'research', name: 'Research' }
-  ]);
-  if (!fs.existsSync(fp('projects.json'))) save('projects.json', [
-    { id: 'blackglass', name: 'BlackGlass' },
-    { id: 'caregrid', name: 'CareGrid' },
-    { id: 'staffroot', name: 'StaffRoot' },
-    { id: 'iupetra', name: 'IuPetra' },
-    { id: 'thothscript', name: 'ThothScript' },
-    { id: 'bonepile', name: 'Bonepile' }
-  ]);
-  if (!fs.existsSync(fp('users.json'))) save('users.json', demoUsers());
+  if (!fs.existsSync(fp('departments.json'))) {
+    save('departments.json', [{ id: 'general', name: 'General' }]);
+  }
+  if (!fs.existsSync(fp('projects.json'))) save('projects.json', []);
+  if (!fs.existsSync(fp('users.json'))) save('users.json', []);
   if (!fs.existsSync(fp('messages.json'))) save('messages.json', []);
   if (!fs.existsSync(fp('roomMessages.json'))) save('roomMessages.json', []);
 }
@@ -87,6 +54,10 @@ let departments = read('departments.json', []);
 let projects = read('projects.json', []);
 let messages = read('messages.json', []);
 let roomMessages = read('roomMessages.json', []);
+
+if (users.length === 0) {
+  console.warn('Ouiji has no accounts. Create the first local administrator with: npm run create-admin -- <username>');
+}
 
 let migratedPasswords = false;
 for (const user of users) {

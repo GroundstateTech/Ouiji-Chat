@@ -11,7 +11,7 @@ function check(name, ok, detail = '') { checks.push({ name, ok: Boolean(ok), det
 const required = [
   'client/main.js', 'client/preload.js', 'client/index.html', 'client/index.js',
   'client/chat.html', 'client/chat.js', 'client/employee-card.html', 'client/employee-card.js',
-  'server/server.js', 'server/security.js', 'config.json', 'README.md', 'SECURITY.md'
+  'server/server.js', 'server/security.js', 'server/admin.js', 'config.json', 'README.md', 'SECURITY.md'
 ];
 for (const file of required) check(`required file: ${file}`, fs.existsSync(path.join(root, file)), file);
 
@@ -37,6 +37,10 @@ check('server defaults to loopback', server.includes("OUIJI_HOST || '127.0.0.1'"
 check('server enforces sessions', server.includes("msg.type === 'resumeSession'"), 'resumeSession');
 check('server limits websocket payload', server.includes('maxPayload:'), 'maxPayload');
 check('plaintext password migration exists', server.includes('passwordHash') && server.includes('delete user.password'), 'migration');
+check('server has no seeded accounts', !server.includes('demoUsers()') && !server.includes('@groundstate.local'), 'empty local directory');
+check('local admin bootstrap declared', pkg.scripts?.['create-admin'] === 'node server/admin.js', pkg.scripts?.['create-admin'] || 'missing');
+const clientIndex = fs.readFileSync(path.join(root, 'client/index.js'), 'utf8');
+check('client uses neutral organization default', clientIndex.includes("'Your Organization'") && !clientIndex.includes("|| 'Groundstate'"), 'organization branding');
 
 const electron = fs.readFileSync(path.join(root, 'client/main.js'), 'utf8');
 check('Electron sandbox enabled', electron.includes('app.enableSandbox()') && electron.includes('sandbox: true'), 'sandbox');

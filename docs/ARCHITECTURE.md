@@ -1,6 +1,6 @@
 # Ouiji Architecture
 
-Ouiji InHouse is deliberately the communications client, not the organization authority. It handles directory display, presence, direct messages, rooms and lightweight employee cards. Organization-wide roles, HR data and administrative authority belong outside Ouiji.
+Ouiji Chat is deliberately the communications client, not the organization authority. It handles directory display, presence, direct messages, rooms and lightweight employee cards. Organization-wide roles, HR data and administrative authority belong outside Ouiji.
 
 ## Process model
 
@@ -69,5 +69,5 @@ Planned structural improvements include:
 - room membership/authorization;
 - delivery/read receipts;
 - TLS/WSS reference deployment;
-- optional Groundstate Control Center identity integration;
+- optional provider-neutral identity adapter, disabled unless configured;
 - attachment service isolated from message transport with strict quotas and validation.

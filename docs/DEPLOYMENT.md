@@ -7,6 +7,7 @@ Ouiji v3.2 is designed to be safe-by-default for local development and deliberat
 ```powershell
 npm ci
 npm run verify
+npm run create-admin -- admin "choose-a-password-with-12+-characters"
 npm run server
 ```
 
@@ -16,7 +17,7 @@ Then, in a second terminal:
 npm start
 ```
 
-The server binds to `127.0.0.1:8080` by default. No LAN or internet exposure is required for normal development.
+The first command creates a local administrator in the server's own data directory. Fresh installations contain no demo users or shared passwords. The server binds to `127.0.0.1:8080` by default; no LAN or internet exposure is required for normal development.
 
 ## Trusted LAN
 
