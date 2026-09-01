@@ -36,7 +36,7 @@ jobs:
       - name: Upload packaged application
         uses: actions/upload-artifact@v7
         with:
-          name: Ouiji-InHouse-Windows-x64-${{ github.sha }}
-          path: artifacts/Ouiji-InHouse-win32-x64/
+          name: Ouiji-Chat-Windows-x64-${{ github.sha }}
+          path: artifacts/Ouiji-Chat-win32-x64/
           if-no-files-found: error
           retention-days: 14
