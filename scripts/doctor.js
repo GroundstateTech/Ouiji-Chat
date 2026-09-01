@@ -22,6 +22,16 @@ check('ws dependency declared', /^\^8\./.test(pkg.dependencies?.ws || ''), pkg.d
 check('supported Electron declared', /^\^(43|44)\./.test(pkg.devDependencies?.electron || ''), pkg.devDependencies?.electron || 'missing');
 check('verify script declared', typeof pkg.scripts?.verify === 'string', pkg.scripts?.verify || 'missing');
 
+try {
+  const lock = JSON.parse(fs.readFileSync(path.join(root, 'package-lock.json'), 'utf8'));
+  const lockRoot = lock.packages?.[''] || {};
+  check('lockfile project matches package', lockRoot.name === pkg.name && lockRoot.version === pkg.version, `${lockRoot.name || 'missing'}@${lockRoot.version || 'missing'}`);
+  check('lockfile ws range matches package', lockRoot.dependencies?.ws === pkg.dependencies?.ws, lockRoot.dependencies?.ws || 'missing');
+  check('lockfile Electron range matches package', lockRoot.devDependencies?.electron === pkg.devDependencies?.electron, lockRoot.devDependencies?.electron || 'missing');
+} catch (error) {
+  check('package-lock parses', false, error.message);
+}
+
 const server = fs.readFileSync(path.join(root, 'server/server.js'), 'utf8');
 check('server defaults to loopback', server.includes("OUIJI_HOST || '127.0.0.1'"), 'OUIJI_HOST fallback');
 check('server enforces sessions', server.includes("msg.type === 'resumeSession'"), 'resumeSession');
