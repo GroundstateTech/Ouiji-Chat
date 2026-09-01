@@ -19,7 +19,7 @@ const nodeMajor = Number(process.versions.node.split('.')[0]);
 check('Node.js >= 22', nodeMajor >= 22, process.version);
 check('package is private', pkg.private === true, `private=${String(pkg.private)}`);
 check('ws dependency declared', /^\^8\./.test(pkg.dependencies?.ws || ''), pkg.dependencies?.ws || 'missing');
-check('Electron 43 declared', /^\^43\./.test(pkg.devDependencies?.electron || ''), pkg.devDependencies?.electron || 'missing');
+check('supported Electron declared', /^\^(43|44)\./.test(pkg.devDependencies?.electron || ''), pkg.devDependencies?.electron || 'missing');
 check('verify script declared', typeof pkg.scripts?.verify === 'string', pkg.scripts?.verify || 'missing');
 
 const server = fs.readFileSync(path.join(root, 'server/server.js'), 'utf8');
