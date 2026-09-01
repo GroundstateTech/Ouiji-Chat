@@ -1,6 +1,6 @@
 const params = new URLSearchParams(location.search);
 const SERVER_URL = params.get('serverUrl') || 'ws://localhost:8080/ws';
-const COMPANY = params.get('companyName') || 'Groundstate';
+const COMPANY = params.get('companyName') || 'Your Organization';
 
 let ws = null;
 let reconnectTimer = null;
@@ -178,10 +178,10 @@ function connect() {
 }
 
 function renderLogin(message = '') {
-  document.title = 'Ouiji InHouse';
+  document.title = 'Ouiji Chat';
   appEl.innerHTML = `<div class="login">
-    <div class="brand-row"><div><div class="title">Ouiji InHouse</div><div class="subtitle">${esc(COMPANY)} Internal Network</div></div><span class="sigil">◉</span></div>
-    <div class="note">Private-first team messaging. Demo builds use seeded local accounts; change them before real deployment.</div>
+    <div class="brand-row"><div><div class="title">Ouiji Chat</div><div class="subtitle">${esc(COMPANY)} Internal Network</div></div><span class="sigil">◉</span></div>
+    <div class="note">Private-server messaging. Sign in with an account created by this server's administrator.</div>
     ${message ? `<div class="login-message">${esc(message)}</div>` : ''}
     <label>Username<input id="username" autocomplete="username" placeholder="Username"></label>
     <label>Password<input id="password" type="password" autocomplete="current-password" placeholder="Password"></label>
@@ -231,7 +231,7 @@ function render() {
   const online = directory.users.filter(user => user.status !== 'Offline').length;
   const me = directory.users.find(user => user.username === currentUser);
   const unread = totalUnread();
-  document.title = unread ? `(${unread}) Ouiji InHouse` : 'Ouiji InHouse';
+  document.title = unread ? `(${unread}) Ouiji Chat` : 'Ouiji Chat';
 
   appEl.innerHTML = `<div class="window">
     <header class="header"><div><div class="title">Ouiji Chat${unread ? ` · ${unread} unread` : ''}</div><div class="subtitle">${esc(COMPANY)} · ${online} online</div></div><button class="small-btn" id="refreshBtn" title="Refresh directory">↻</button></header>
