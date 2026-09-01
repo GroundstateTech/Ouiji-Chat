@@ -8,8 +8,8 @@ The goal is simple: **bring back instant messaging as an actual application inst
 
 Ouiji is designed to support two deployment models from the same product family:
 
-1. **Groundstate-hosted public service** — the long-term internet service, with user accounts, presence, direct messages, rooms, profiles and shared infrastructure operated by Groundstate.
-2. **Independent/private server deployment** — businesses, organizations, labs, teams, communities and closed networks can run their own Ouiji server and point their clients at that server instead of Groundstate infrastructure.
+1. **Independent/private server deployment** — businesses, organizations, labs, teams, communities and closed networks run their own Ouiji server and local accounts.
+2. **Hosted service deployment** — an operator may host Ouiji for its own users, with that operator controlling accounts, policy, storage and infrastructure.
 
 A private deployment can remain LAN-only or be operated on an organization's own secured network. That makes Ouiji useful both as a public AIM-style messenger and as a compact private communications system.
 
@@ -50,6 +50,7 @@ See `PRODUCT_OWNERSHIP.md`, `CONTRIBUTOR_AGREEMENT.md`, `LICENSE` and `CONTRIBUT
 ```powershell
 npm install
 npm run verify
+npm run create-admin -- admin "choose-a-password-with-12+-characters"
 npm run server
 ```
 
@@ -113,7 +114,7 @@ Ouiji remains **pre-production software**. The current alpha is suitable for dev
 
 Near-term priorities include:
 
-- public Groundstate-hosted account service
+- provider-neutral hosted deployment guidance
 - hardened standalone/private-server package
 - server administration console
 - account/password management
@@ -125,7 +126,7 @@ Near-term priorities include:
 - durable database storage
 - TLS/WSS deployment
 - signed installers
-- optional Groundstate Control Center identity integration for organizations
+- optional provider-neutral organization identity integration in a future adapter
 - server federation research without requiring federation for private installs
 
 ## Contributing
